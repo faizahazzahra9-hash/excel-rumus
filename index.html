@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Excel Interaktif (SMP) - 40 Soal & Drag/Drop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #107c41; /* Excel Green */
+            color: #2d3748;
+            font-family: 'Comic Sans MS', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.08"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
+            user-select: none;
+        }
+        
+        .quiz-card {
+            background-color: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            border-top: 8px solid #217346;
+            border-bottom: 8px solid #107c41;
+        }
+
+        .option-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid #e2e8f0;
+        }
+        .option-btn:hover:not(:disabled) {
+            border-color: #107c41;
+            background-color: #f0fdf4;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(16, 124, 65, 0.15);
+        }
+        .option-btn.correct {
+            background-color: #d1fae5 !important;
+            border-color: #10b981 !important;
+            color: #065f46 !important;
+        }
+        .option-btn.wrong {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            color: #991b1b !important;
+        }
+
+        /* Drag and Drop Styling */
+        .drag-item {
+            cursor: grab;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+        }
+        .drag-item:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+        .drag-item.placed {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .drop-slot {
+            min-height: 52px;
+            border: 2.5px dashed #a7f3d0;
+            background-color: #f0fdf4;
+            transition: all 0.2s ease;
+        }
+        .drop-slot.hovered {
+            border-color: #107c41;
+            background-color: #dcfce7;
+        }
+        .drop-slot.filled {
+            border-style: solid;
+            border-color: #217346;
+            background-color: #ffffff;
+        }
+
+        /* Mini Excel Table Preview */
+        .excel-mini-table {
+            border-collapse: collapse;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.85rem;
+        }
+        .excel-mini-table th {
+            background-color: #e2e8f0;
+            border: 1px solid #cbd5e1;
+            padding: 4px 8px;
+            color: #475569;
+            font-weight: 600;
+        }
+        .excel-mini-table td {
+            border: 1px solid #cbd5e1;
+            padding: 4px 10px;
+            background-color: white;
+            text-align: center;
+        }
+        .excel-mini-table td.highlight {
+            background-color: #dcfce7;
+            font-weight: bold;
+            color: #15803d;
+        }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        .bounce-in { animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes bounceIn {
+            0% { transform: scale(0.4); opacity: 0; }
+            60% { transform: scale(1.08); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        /* Custom Scrollbar for Drag Blocks */
+        ::-webkit-scrollbar { height: 8px; width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #107c41; border-radius: 10px; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-3 md:p-6">
+
+    <audio id="bg-music" loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-ukulele.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="correct-sound">
+        <source src="https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg" type="audio/ogg">
+    </audio>
+    <audio id="wrong-sound">
+        <source src="https://actions.google.com/sounds/v1/cartoon/cartoon_cowbell.ogg" type="audio/ogg">
+    </audio>
+
+    <div class="quiz-card max-w-3xl w-full rounded-3xl p-5 md:p-8 fade-in relative overflow-hidden">
+        
+        <!-- Header Controls -->
+        <div class="flex justify-between items-center mb-5 border-b-2 border-gray-100 pb-4">
+            <div class="flex items-center text-[#217346] font-bold text-xl md:text-2xl tracking-wide">
+                <i class="fas fa-file-excel text-3xl md:text-4xl mr-3 text-green-700"></i>
+                <span>Master Excel SMP</span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="mute-btn" class="bg-gray-100 hover:bg-green-100 p-2.5 rounded-full text-gray-500 hover:text-green-700 transition transform hover:scale-105" onclick="toggleMute()" title="Suara / Musik">
+                    <i class="fas fa-volume-mute text-xl" id="mute-icon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- START SCREEN -->
+        <div id="start-screen" class="text-center py-6">
+            <div class="text-7xl md:text-8xl mb-4 bounce-in">📊🧩⚡</div>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800 mb-3">Kuis Interaktif Excel SMP!</h1>
+            <p class="text-base md:text-lg text-gray-600 mb-6 max-w-xl mx-auto leading-relaxed">
+                Uji pemahamanmu seputar rumus, ikon, dan fitur Excel dengan variasi soal <strong>Pilihan Ganda</strong>, <strong>Ketik Rumus</strong>, dan <strong>Drag & Drop (Susun Rumus)</strong>!
+            </p>
+
+            <div class="bg-green-50 rounded-2xl p-4 max-w-md mx-auto mb-8 border border-green-200">
+                <label class="block text-green-900 font-bold mb-2 text-sm uppercase tracking-wider"><i class="fas fa-list-check mr-1"></i> Pilih Jumlah Soal:</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setQuizLength(10)" id="btn-len-10" class="quiz-len-btn bg-[#217346] text-white py-2 px-3 rounded-xl font-bold text-sm shadow transition">10 Soal</button>
+                    <button onclick="setQuizLength(20)" id="btn-len-20" class="quiz-len-btn bg-white text-gray-700 hover:bg-green-100 py-2 px-3 rounded-xl font-bold text-sm border border-gray-300 transition">20 Soal</button>
+                    <button onclick="setQuizLength(40)" id="btn-len-40" class="quiz-len-btn bg-white text-gray-700 hover:bg-green-100 py-2 px-3 rounded-xl font-bold text-sm border border-gray-300 transition">40 Soal (Semua)</button>
+                </div>
+            </div>
+
+            <button onclick="startQuiz()" class="bg-[#217346] hover:bg-[#107c41] text-white font-bold text-xl py-4 px-10 rounded-full shadow-xl transition transform hover:-translate-y-1 hover:scale-105 active:scale-95 flex items-center mx-auto">
+                <i class="fas fa-play-circle text-2xl mr-3"></i> Mulai Kuis Sekarang
+            </button>
+        </div>
+
+        <!-- QUIZ SCREEN -->
+        <div id="quiz-screen" class="hidden">
+            <!-- Progress & Score Header -->
+            <div class="flex justify-between items-center text-sm md:text-base text-gray-600 mb-3 font-bold">
+                <span id="question-counter" class="bg-gray-100 text-gray-700 py-1.5 px-3.5 rounded-xl border border-gray-200">Soal 1 / 10</span>
+                <span id="question-type-badge" class="bg-indigo-100 text-indigo-800 py-1.5 px-3.5 rounded-xl text-xs uppercase tracking-wider font-extrabold"><i class="fas fa-star mr-1"></i> Pilihan Ganda</span>
+                <span id="score-display" class="text-green-700 bg-green-100 py-1.5 px-3.5 rounded-xl border border-green-300"><i class="fas fa-trophy text-yellow-500 mr-1"></i> Skor: 0</span>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 rounded-full h-3 mb-6 shadow-inner overflow-hidden">
+                <div id="progress-bar-inner" class="bg-gradient-to-r from-green-400 to-[#217346] h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <!-- Question Card Area -->
+            <div class="question-container bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 mb-5">
+                
+                <div class="flex flex-col md:flex-row items-center gap-4 mb-4">
+                    <div class="w-16 h-16 md:w-20 md:h-20 shrink-0 flex items-center justify-center rounded-2xl bg-green-50 border-2 border-green-300 text-[#217346] shadow-sm">
+                        <i id="question-icon" class="fas fa-question text-3xl md:text-4xl"></i>
+                    </div>
+                    <div class="flex-grow text-center md:text-left">
+                        <h2 id="question-text" class="text-xl md:text-2xl font-bold text-gray-800 leading-snug">Pertanyaan akan tampil di sini?</h2>
+                        <p id="question-subtext" class="text-sm text-gray-500 mt-1 italic hidden"></p>
+                    </div>
+                </div>
+
+                <!-- Mini Spreadsheet Visual Context (Shown when relevant) -->
+                <div id="sheet-preview-container" class="hidden my-4 p-3 bg-slate-50 rounded-xl border border-slate-200 overflow-x-auto flex flex-col items-center">
+                    <span class="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide"><i class="fas fa-table mr-1"></i> Tampilan Lembar Kerja Excel:</span>
+                    <div id="sheet-preview-content"></div>
+                </div>
+
+                <div id="answer-area" class="mt-4">
+                    <!-- Dynamic Answer Components (MCQ / Input / Drag-Drop) will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Rationale Feedback Box -->
+            <div id="feedback-container" class="hidden rounded-2xl p-4 md:p-5 mb-5 text-base font-semibold shadow-sm fade-in"></div>
+
+            <!-- Next Button -->
+            <div class="flex justify-between items-center">
+                <div class="text-xs text-gray-400 font-bold" id="hint-text"></div>
+                <button id="next-btn" onclick="nextQuestion()" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg py-3 px-8 rounded-2xl transition shadow-lg transform hover:scale-105 active:scale-95">
+                    Lanjut Soal <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- RESULT SCREEN -->
+        <div id="result-screen" class="hidden text-center py-8 fade-in">
+            <div id="result-icon" class="text-7xl md:text-8xl mb-4 bounce-in">🏆</div>
+            <h2 class="text-3xl md:text-4xl font-extrabold text-gray-800 mb-2">Hebat! Kuis Selesai!</h2>
+            <p class="text-lg text-gray-600 mb-4">Hasil Perolehan Nilai Akhir Kamu:</p>
+            
+            <div class="inline-block bg-green-50 border-4 border-[#217346] rounded-3xl py-4 px-10 mb-6 shadow-inner">
+                <div class="text-6xl md:text-7xl font-black text-[#217346]" id="final-score">0</div>
+                <div class="text-sm font-bold text-green-700 uppercase tracking-widest mt-1" id="score-percentage">100% Benar</div>
+            </div>
+
+            <p id="result-message" class="text-xl md:text-2xl text-gray-700 mb-8 font-bold max-w-lg mx-auto"></p>
+            
+            <button onclick="resetQuiz()" class="bg-[#217346] hover:bg-[#107c41] text-white font-bold text-xl py-4 px-10 rounded-full shadow-xl transition transform hover:scale-105 active:scale-95 flex items-center mx-auto">
+                <i class="fas fa-rotate-right mr-3"></i> Coba Lagi Yuk!
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Comprehensive 40 Questions Bank for SMP Level
+        const fullQuestionBank = [
+            // --- 1. MCQ QUESTIONS ---
+            { 
+                type: 'mcq',
+                q: "Kotak kecil yang merupakan pertemuan antara baris dan kolom di Excel disebut...", 
+                icon: "fa-border-all text-blue-500", 
+                o: ["Sel (Cell)", "Tabel", "Garis", "Buku"], 
+                a: 0, 
+                r: "Sel (Cell) adalah kotak tunggal tempat kita memasukkan data atau angka di Excel." 
+            },
+            { 
+                type: 'mcq',
+                q: "Rumus apa yang digunakan untuk MENJUMLAHKAN sekumpulan angka secara cepat?", 
+                icon: "fa-calculator text-green-600", 
+                o: ["=SUM()", "=AVERAGE()", "=MAX()", "=COUNT()"], 
+                a: 0, 
+                r: "Fungsi =SUM() digunakan khusus untuk menjumlahkan angka." 
+            },
+            { 
+                type: 'mcq',
+                q: "Untuk mencari nilai RATA-RATA nilai ulangan siswa, rumus yang tepat adalah...", 
+                icon: "fa-chart-line text-purple-600", 
+                o: ["=AVERAGE()", "=MIN()", "=TOTAL()", "=SUM()"], 
+                a: 0, 
+                r: "Fungsi =AVERAGE() menghitung nilai rata-rata dari angka-angka yang dipilih." 
+            },
+            { 
+                type: 'mcq',
+                q: "Simbol WAJIB yang harus diketik pertama kali sebelum membuat rumus di Excel adalah...", 
+                icon: "fa-equals text-red-500", 
+                o: ["Tanda Sama Dengan (=)", "Tanda Tambah (+)", "Tanda Titik Dua (:)", "Tanda Kurung ()"], 
+                a: 0, 
+                r: "Tanpa diawali tanda sama dengan (=), Excel hanya menganggap tulisan tersebut sebagai teks biasa." 
+            },
+            { 
+                type: 'mcq',
+                q: "Rumus untuk mencari nilai TERBESAR / tertinggi dari sekumpulan data adalah...", 
+                icon: "fa-arrow-up-right-dots text-amber-500", 
+                o: ["=MAX()", "=MIN()", "=HIGH()", "=TOP()"], 
+                a: 0, 
+                r: "=MAX() mengambil nilai paling tinggi dari rentang angka." 
+            },
+            { 
+                type: 'mcq',
+                q: "Rumus untuk mencari nilai TERKECIL / terendah dari sekumpulan data adalah...", 
+                icon: "fa-arrow-down-short-wide text-cyan-600", 
+                o: ["=MIN()", "=MAX()", "=LOW()", "=BOTTOM()"], 
+                a: 0, 
+                r: "=MIN() mengambil nilai paling rendah dari rentang angka." 
+            },
+            { 
+                type: 'mcq',
+                q: "Bagaimana kolom ditandai di Microsoft Excel?", 
+                icon: "fa-font text-indigo-500", 
+                o: ["Dengan Huruf (A, B, C...)", "Dengan Angka (1, 2, 3...)", "Dengan Simbol (!, @, #...)", "Dengan Warna"], 
+                a: 0, 
+                r: "Kolom yang berdiri tegak (vertikal) ditandai dengan Huruf abjad." 
+            },
+            { 
+                type: 'mcq',
+                q: "Bagaimana baris ditandai di Microsoft Excel?", 
+                icon: "fa-list-ol text-green-700", 
+                o: ["Dengan Angka (1, 2, 3...)", "Dengan Huruf (A, B, C...)", "Dengan Simbol (!, @, #...)", "Dengan Titik"], 
+                a: 0, 
+                r: "Baris yang mendatar (horisontal) ditandai dengan Angka." 
+            },
+            { 
+                type: 'mcq',
+                q: "Simbol Bintang (*) pada rumus Excel berfungsi untuk...", 
+                icon: "fa-asterisk text-yellow-600", 
+                o: ["Perkalian", "Pembagian", "Penjumlahan", "Pengurangan"], 
+                a: 0, 
+                r: "Operasi perkalian di Excel menggunakan tanda bintang (*), bukan huruf 'x'." 
+            },
+            { 
+                type: 'mcq',
+                q: "Simbol Garis Miring (/) pada rumus Excel berfungsi untuk...", 
+                icon: "fa-divide text-rose-500", 
+                o: ["Pembagian", "Perkalian", "Penjumlahan", "Pengurangan"], 
+                a: 0, 
+                r: "Operasi pembagian di Excel menggunakan garis miring (/)." 
+            },
+            { 
+                type: 'mcq',
+                q: "Fitur 'Merge & Center' berguna untuk...", 
+                icon: "fa-object-group text-teal-600", 
+                o: ["Menggabungkan beberapa sel menjadi satu", "Mewarnai kotak sel", "Membuat grafik", "Menghapus sel"], 
+                a: 0, 
+                r: "Merge & Center menggabungkan sel dan meratakan teks di tengah (biasanya untuk judul tabel)." 
+            },
+            { 
+                type: 'mcq',
+                q: "Satu halaman lembar kerja tempat kita mengetik di Excel dinamakan...", 
+                icon: "fa-file-excel text-emerald-600", 
+                o: ["Worksheet (Sheet)", "Slide", "Document", "Desktop"], 
+                a: 0, 
+                r: "Setiap lembar kerja di dalam file Excel dinamakan Worksheet atau Sheet." 
+            },
+            { 
+                type: 'mcq',
+                q: "Kumpulan beberapa sel yang dipilih bersamaan (contoh: A1 sampai A5) disebut...", 
+                icon: "fa-table-cells-large text-blue-600", 
+                o: ["Range (Rentang)", "Group", "Cluster", "Block"], 
+                a: 0, 
+                r: "Range adalah gabungan atau kelompok dari dua sel atau lebih di lembar kerja." 
+            },
+            { 
+                type: 'mcq',
+                q: "Ikon huruf 'B' (Bold) pada Toolbar berfungsi untuk...", 
+                icon: "fa-bold text-gray-900", 
+                o: ["Menebalkan teks", "Meninggikan teks", "Mencetak miring", "Mewarnai teks"], 
+                a: 0, 
+                r: "Bold (Ctrl+B) digunakan untuk menebalkan huruf atau angka." 
+            },
+            { 
+                type: 'mcq',
+                q: "Tombol shortcut keyboard untuk menyalin (Copy) sel adalah...", 
+                icon: "fa-copy text-amber-600", 
+                o: ["Ctrl + C", "Ctrl + V", "Ctrl + X", "Ctrl + Z"], 
+                a: 0, 
+                r: "Ctrl + C digunakan untuk menyalin (Copy) data." 
+            },
+            { 
+                type: 'mcq',
+                q: "Tombol shortcut keyboard untuk menempelkan hasil salinan (Paste) adalah...", 
+                icon: "fa-paste text-orange-600", 
+                o: ["Ctrl + V", "Ctrl + C", "Ctrl + P", "Ctrl + S"], 
+                a: 0, 
+                r: "Ctrl + V digunakan untuk menempel (Paste) data yang sudah di-copy." 
+            },
+            { 
+                type: 'mcq',
+                q: "Simbol tanda pagar (###) yang memenuhi sel artinya...", 
+                icon: "fa-hashtag text-slate-600", 
+                o: ["Kolom kurang lebar untuk menampilkan angka", "Rumus salah", "Data terhapus", "Sel terkunci"], 
+                a: 0, 
+                r: "Tanda ### muncul jika angka terlalu panjang. Solusinya cukup lebarkan kolomnya." 
+            },
+            { 
+                type: 'mcq',
+                q: "Rumus logika yang dipakai untuk mengecek kondisi (contoh: jika nilai > 70 maka Lulus) adalah...", 
+                icon: "fa-code-branch text-violet-600", 
+                o: ["=IF()", "=OR()", "=AND()", "=COUNT()"], 
+                a: 0, 
+                r: "Fungsi =IF() dipakai untuk menguji suatu syarat/kondisi logika." 
+            },
+            { 
+                type: 'mcq',
+                q: "Fitur untuk mengurutkan data dari A ke Z atau dari kecil ke besar adalah...", 
+                icon: "fa-arrow-down-a-z text-blue-700", 
+                o: ["Sort", "Filter", "Find", "Replace"], 
+                a: 0, 
+                r: "Fitur Sort berguna untuk mengurutkan data secara teratur." 
+            },
+            { 
+                type: 'mcq',
+                q: "Rumus untuk menghitung banyaknya sel yang berisi ANGKA adalah...", 
+                icon: "fa-arrow-up-1-9 text-emerald-600", 
+                o: ["=COUNT()", "=SUM()", "=TOTAL()", "=NUMBER()"], 
+                a: 0, 
+                r: "Fungsi =COUNT() menghitung jumlah sel yang terisi data angka." 
+            },
+
+            // --- 2. INPUT FORMULA QUESTIONS ---
+            {
+                type: 'input',
+                q: "Ketikkan rumus Excel untuk MENJUMLAHKAN sel A1 sampai A10!",
+                icon: "fa-keyboard text-[#217346]",
+                hint: "Gunakan =SUM(...) dan tanda titik dua (:) untuk rentang.",
+                sheetData: {
+                    headers: ['A', 'B'],
+                    rows: [
+                        ['10', ''],
+                        ['20', ''],
+                        ['...', ''],
+                        ['15', '']
+                    ]
+                },
+                acceptedAnswers: ["=SUM(A1:A10)", "=SUM(A1:A10)"],
+                r: "Rumus penjumlahan rentang A1 hingga A10 yang benar adalah =SUM(A1:A10)."
+            },
+            {
+                type: 'input',
+                q: "Ketikkan rumus untuk mencari nilai RATA-RATA dari sel B1 sampai B5!",
+                icon: "fa-calculator text-purple-600",
+                hint: "Gunakan fungsi =AVERAGE(...)",
+                sheetData: {
+                    headers: ['A', 'B'],
+                    rows: [
+                        ['', '80'],
+                        ['', '90'],
+                        ['', '75']
+                    ]
+                },
+                acceptedAnswers: ["=AVERAGE(B1:B5)"],
+                r: "Rumus rata-rata dari sel B1 sampai B5 adalah =AVERAGE(B1:B5)."
+            },
+            {
+                type: 'input',
+                q: "Ketikkan rumus untuk MENGALIKAN nilai sel A1 dengan sel B1!",
+                icon: "fa-asterisk text-amber-600",
+                hint: "Gunakan simbol bintang (*) untuk perkalian.",
+                sheetData: {
+                    headers: ['A', 'B'],
+                    rows: [
+                        ['5', '4']
+                    ]
+                },
+                acceptedAnswers: ["=A1*B1", "=B1*A1"],
+                r: "Rumus perkalian sel A1 dan B1 adalah =A1*B1."
+            },
+            {
+                type: 'input',
+                q: "Ketikkan rumus untuk MEMBAGI sel C1 dengan angka 2!",
+                icon: "fa-divide text-rose-600",
+                hint: "Gunakan simbol garis miring (/) untuk pembagian.",
+                sheetData: {
+                    headers: ['C'],
+                    rows: [['50']]
+                },
+                acceptedAnswers: ["=C1/2"],
+                r: "Rumus pembagian sel C1 dengan angka 2 adalah =C1/2."
+            },
+            {
+                type: 'input',
+                q: "Ketikkan rumus untuk mencari nilai TERBESAR pada sel D1 sampai D20!",
+                icon: "fa-arrow-up-right-dots text-emerald-600",
+                hint: "Gunakan fungsi =MAX(...)",
+                acceptedAnswers: ["=MAX(D1:D20)"],
+                r: "Rumus nilai terbesar untuk rentang D1 sampai D20 adalah =MAX(D1:D20)."
+            },
+            {
+                type: 'input',
+                q: "Ketikkan rumus untuk mencari nilai TERKECIL pada sel E1 sampai E15!",
+                icon: "fa-arrow-down-short-wide text-sky-600",
+                hint: "Gunakan fungsi =MIN(...)",
+                acceptedAnswers: ["=MIN(E1:E15)"],
+                r: "Rumus nilai terendah sel E1 sampai E15 adalah =MIN(E1:E15)."
+            },
+            {
+                type: 'input',
+                q: "Ketikkan rumus MENGURANGI sel B5 dengan sel B2!",
+                icon: "fa-minus text-red-500",
+                hint: "Gunakan simbol minus (-).",
+                acceptedAnswers: ["=B5-B2"],
+                r: "Rumus pengurangan sel B5 dikurangi B2 yang benar adalah =B5-B2."
+            },
+            {
+                type: 'input',
+                q: "Ketikkan rumus untuk MENGHITUNG BANYAKNYA SEL berisi angka pada rentang A1:A8!",
+                icon: "fa-arrow-up-1-9 text-indigo-600",
+                hint: "Gunakan fungsi =COUNT(...)",
+                acceptedAnswers: ["=COUNT(A1:A8)"],
+                r: "Rumus menghitung sel terisi angka pada rentang A1:A8 adalah =COUNT(A1:A8)."
+            },
+
+            // --- 3. DRAG & DROP / SUSUN RUMUS QUESTIONS ---
+            {
+                type: 'drag_assemble',
+                q: "Susun blok-blok berikut menjadi rumus penjumlahan sel B1 sampai B10 yang BENAR!",
+                icon: "fa-puzzle-piece text-green-600",
+                tokens: ["=", "SUM", "(", "B1:B10", ")"],
+                correctOrder: ["=", "SUM", "(", "B1:B10", ")"],
+                r: "Urutan susunan rumus penjumlahan yang benar adalah = + SUM + ( + B1:B10 + )."
+            },
+            {
+                type: 'drag_assemble',
+                q: "Susun blok-blok di bawah menjadi rumus mencari RATA-RATA sel A1 sampai A5!",
+                icon: "fa-puzzle-piece text-purple-600",
+                tokens: ["AVERAGE", "=", "(", "A1:A5", ")"],
+                correctOrder: ["=", "AVERAGE", "(", "A1:A5", ")"],
+                r: "Urutan rumus rata-rata yang tepat adalah =AVERAGE(A1:A5)."
+            },
+            {
+                type: 'drag_assemble',
+                q: "Susun blok rumus perkalian antara sel C1 dan D1!",
+                icon: "fa-puzzle-piece text-amber-600",
+                tokens: ["*", "C1", "=", "D1"],
+                correctOrder: ["=", "C1", "*", "D1"],
+                r: "Urutan rumus perkalian sel C1 dan D1 yang benar adalah =C1*D1."
+            },
+            {
+                type: 'drag_assemble',
+                q: "Susun rumus untuk mencari angka TERBESAR di rentang C1:C20!",
+                icon: "fa-puzzle-piece text-cyan-600",
+                tokens: ["(", "MAX", "C1:C20", "=", ")"],
+                correctOrder: ["=", "MAX", "(", "C1:C20", ")"],
+                r: "Rumus mencari angka terbesar disusun menjadi =MAX(C1:C20)."
+            },
+            {
+                type: 'drag_match',
+                q: "Cocokkan nama fungsi rumus di sebelah kiri dengan kegunaannya di sebelah kanan!",
+                icon: "fa-hand-pointer text-[#217346]",
+                pairs: [
+                    { item: "=SUM()", target: "Menjumlahkan Angka" },
+                    { item: "=AVERAGE()", target: "Mencari Rata-Rata" },
+                    { item: "=MAX()", target: "Mencari Angka Tertinggi" }
+                ],
+                r: "=SUM() untuk penjumlahan, =AVERAGE() untuk rata-rata, dan =MAX() untuk angka tertinggi."
+            },
+            {
+                type: 'drag_match',
+                q: "Pasangkan simbol matematika Excel dengan fungsinya!",
+                icon: "fa-shapes text-orange-500",
+                pairs: [
+                    { item: "*", target: "Perkalian" },
+                    { item: "/", target: "Pembagian" },
+                    { item: "+", target: "Penjumlahan" }
+                ],
+                r: "Simbol (*) untuk kali, (/) untuk bagi, dan (+) untuk tambah."
+            },
+            {
+                type: 'drag_match',
+                q: "Jodohkan tombol shortcut keyboard dengan perintahnya!",
+                icon: "fa-keyboard text-slate-700",
+                pairs: [
+                    { item: "Ctrl + C", target: "Menyalin (Copy)" },
+                    { item: "Ctrl + V", target: "Menempel (Paste)" },
+                    { item: "Ctrl + S", target: "Menyimpan (Save)" }
+                ],
+                r: "Ctrl+C = Copy, Ctrl+V = Paste, dan Ctrl+S = Save."
+            },
+            {
+                type: 'drag_assemble',
+                q: "Susun rumus untuk mencari nilai TERKECIL di rentang F1:F10!",
+                icon: "fa-puzzle-piece text-rose-500",
+                tokens: ["MIN", "=", "(", "F1:F10", ")"],
+                correctOrder: ["=", "MIN", "(", "F1:F10", ")"],
+                r: "Rumus nilai terkecil disusun menjadi =MIN(F1:F10)."
+            },
+            {
+                type: 'drag_match',
+                q: "Jodohkan nama fitur formatting sel dengan efeknya!",
+                icon: "fa-font text-blue-600",
+                pairs: [
+                    { item: "Bold", target: "Menebalkan Teks" },
+                    { item: "Italic", target: "Mencetak Miring" },
+                    { item: "Underline", target: "Garis Bawah" }
+                ],
+                r: "Bold menebalkan, Italic memiringkan, dan Underline memberi garis bawah."
+            },
+            {
+                type: 'input',
+                q: "Ketikkan rumus untuk MENAMBAHKAN sel A1 dan sel B1!",
+                icon: "fa-plus text-green-600",
+                hint: "Gunakan simbol tambah (+)",
+                acceptedAnswers: ["=A1+B1", "=B1+A1"],
+                r: "Rumus penjumlahan sel A1 dan B1 adalah =A1+B1."
+            },
+            {
+                type: 'mcq',
+                q: "Ikon bergambar Disket (Save) di Microsoft Excel berfungsi untuk...", 
+                icon: "fa-floppy-disk text-slate-700", 
+                o: ["Menyimpan file dokumen", "Mencetak dokumen", "Menghapus file", "Membuka file baru"], 
+                a: 0, 
+                r: "Ikon disket atau Ctrl+S berfungsi untuk menyimpan (Save) hasil pekerjaan." 
+            },
+            {
+                type: 'mcq',
+                q: "Ekstensi/akhiran file resmi untuk Microsoft Excel modern adalah...", 
+                icon: "fa-file-code text-emerald-600", 
+                o: [".xlsx", ".docx", ".pptx", ".pdf"], 
+                a: 0, 
+                r: "File Excel disimpan dengan format standar .xlsx." 
+            }
+        ];
+
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedQuizLength = 10;
+        let isMuted = true;
+        let assembledTokens = [];
+        let matchSelections = {};
+
+        // Audio Objects
+        const bgMusic = document.getElementById('bg-music');
+        const correctSound = document.getElementById('correct-sound');
+        const wrongSound = document.getElementById('wrong-sound');
+        bgMusic.volume = 0.15;
+        correctSound.volume = 0.5;
+        wrongSound.volume = 0.5;
+
+        function setQuizLength(len) {
+            selectedQuizLength = len;
+            document.querySelectorAll('.quiz-len-btn').forEach(btn => {
+                btn.className = "quiz-len-btn bg-white text-gray-700 hover:bg-green-100 py-2 px-3 rounded-xl font-bold text-sm border border-gray-300 transition";
+            });
+            const activeBtn = document.getElementById(`btn-len-${len}`);
+            if (activeBtn) {
+                activeBtn.className = "quiz-len-btn bg-[#217346] text-white py-2 px-3 rounded-xl font-bold text-sm shadow transition";
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const icon = document.getElementById('mute-icon');
+            if (isMuted) {
+                bgMusic.pause();
+                icon.className = 'fas fa-volume-mute text-xl text-gray-400';
+            } else {
+                bgMusic.play().catch(() => { isMuted = true; });
+                icon.className = 'fas fa-volume-up text-xl text-green-700';
+            }
+        }
+
+        function playSound(sound) {
+            if (!isMuted) {
+                sound.currentTime = 0;
+                sound.play().catch(() => {});
+            }
+        }
+
+        function shuffleArray(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function startQuiz() {
+            let shuffled = shuffleArray(fullQuestionBank);
+            questions = shuffled.slice(0, Math.min(selectedQuizLength, shuffled.length));
+            
+            currentQuestionIndex = 0;
+            score = 0;
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+
+            if (!isMuted) bgMusic.play().catch(() => { isMuted = true; });
+
+            updateScoreDisplay();
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = questions[currentQuestionIndex];
+            
+            // Header Info
+            document.getElementById('question-counter').innerText = `Soal ${currentQuestionIndex + 1} / ${questions.length}`;
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            document.getElementById('progress-bar-inner').style.width = `${progress}%`;
+
+            // Reset UI
+            document.getElementById('feedback-container').classList.add('hidden');
+            document.getElementById('next-btn').classList.add('hidden');
+            document.getElementById('sheet-preview-container').classList.add('hidden');
+            document.getElementById('hint-text').innerText = '';
+
+            // Icon & Text
+            const iconEl = document.getElementById('question-icon');
+            iconEl.className = `fas ${q.icon} bounce-in`;
+            document.getElementById('question-text').innerText = q.q;
+
+            // Question Type Badge
+            const badgeEl = document.getElementById('question-type-badge');
+            if (q.type === 'mcq') {
+                badgeEl.className = "bg-indigo-100 text-indigo-800 py-1.5 px-3 rounded-xl text-xs uppercase font-extrabold";
+                badgeEl.innerHTML = '<i class="fas fa-list-check mr-1"></i> Pilihan Ganda';
+            } else if (q.type === 'input') {
+                badgeEl.className = "bg-amber-100 text-amber-800 py-1.5 px-3 rounded-xl text-xs uppercase font-extrabold";
+                badgeEl.innerHTML = '<i class="fas fa-keyboard mr-1"></i> Ketik Rumus';
+            } else {
+                badgeEl.className = "bg-emerald-100 text-emerald-800 py-1.5 px-3 rounded-xl text-xs uppercase font-extrabold";
+                badgeEl.innerHTML = '<i class="fas fa-puzzle-piece mr-1"></i> Drag & Drop';
+            }
+
+            // Render Sheet Preview if exists
+            if (q.sheetData) {
+                renderSheetPreview(q.sheetData);
+            }
+
+            // Render Answer Component according to question type
+            const answerArea = document.getElementById('answer-area');
+            answerArea.innerHTML = '';
+
+            if (q.type === 'mcq') {
+                renderMCQ(q, answerArea);
+            } else if (q.type === 'input') {
+                renderInputQuestion(q, answerArea);
+            } else if (q.type === 'drag_assemble') {
+                renderDragAssemble(q, answerArea);
+            } else if (q.type === 'drag_match') {
+                renderDragMatch(q, answerArea);
+            }
+        }
+
+        function renderSheetPreview(sheet) {
+            const container = document.getElementById('sheet-preview-container');
+            const content = document.getElementById('sheet-preview-content');
+            
+            let html = `<table class="excel-mini-table"><thead><tr><th></th>`;
+            sheet.headers.forEach(h => html += `<th>${h}</th>`);
+            html += `</tr></thead><tbody>`;
+
+            sheet.rows.forEach((row, rIdx) => {
+                html += `<tr><th>${rIdx + 1}</th>`;
+                row.forEach(val => {
+                    html += `<td class="${val ? 'highlight' : ''}">${val}</td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody></table>`;
+
+            content.innerHTML = html;
+            container.classList.remove('hidden');
+        }
+
+        function renderMCQ(q, container) {
+            let options = q.o.map((opt, idx) => ({ text: opt, isCorrect: idx === q.a }));
+            options = shuffleArray(options);
+
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3.5';
+
+            const optionLetters = ['A', 'B', 'C', 'D'];
+
+            options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full text-left p-4 rounded-2xl font-bold text-gray-700 bg-white flex items-center justify-between text-base md:text-lg shadow-sm';
+                btn.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-black border border-gray-300 shrink-0">${optionLetters[idx]}</span>
+                        <span>${opt.text}</span>
+                    </div>
+                    <i class="status-icon fas hidden text-2xl"></i>
+                `;
+                btn.onclick = () => selectMCQOption(btn, opt.isCorrect, options, q);
+                grid.appendChild(btn);
+            });
+
+            container.appendChild(grid);
+        }
+
+        function selectMCQOption(selectedBtn, isCorrect, allOptions, q) {
+            document.querySelectorAll('.option-btn').forEach(btn => btn.disabled = true);
+
+            const feedback = document.getElementById('feedback-container');
+            const statusIcon = selectedBtn.querySelector('.status-icon');
+            statusIcon.classList.remove('hidden');
+
+            if (isCorrect) {
+                score += 10;
+                updateScoreDisplay();
+                selectedBtn.classList.add('correct', 'bounce-in');
+                statusIcon.classList.add('fa-check-circle');
+                
+                feedback.className = 'rounded-2xl p-4 md:p-5 mb-5 text-base font-bold bg-green-100 text-green-900 border-2 border-green-300 bounce-in';
+                feedback.innerHTML = `<i class="fas fa-circle-check text-2xl mr-2 text-green-600 align-middle"></i> <span class="align-middle"><strong>Jawaban Tepat!</strong> ${q.r}</span>`;
+                playSound(correctSound);
+            } else {
+                selectedBtn.classList.add('wrong');
+                statusIcon.classList.add('fa-circle-xmark');
+
+                document.querySelectorAll('.option-btn').forEach((btn, idx) => {
+                    if (allOptions[idx].isCorrect) {
+                        btn.classList.add('correct');
+                        btn.querySelector('.status-icon').classList.remove('hidden');
+                        btn.querySelector('.status-icon').classList.add('fa-check-circle');
+                    }
+                });
+
+                feedback.className = 'rounded-2xl p-4 md:p-5 mb-5 text-base font-bold bg-red-100 text-red-900 border-2 border-red-300 bounce-in';
+                feedback.innerHTML = `<i class="fas fa-circle-xmark text-2xl mr-2 text-red-600 align-middle"></i> <span class="align-middle"><strong>Kurang Tepat.</strong> ${q.r}</span>`;
+                playSound(wrongSound);
+            }
+
+            feedback.classList.remove('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function renderInputQuestion(q, container) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'flex flex-col items-center max-w-lg mx-auto py-2';
+
+            if (q.hint) {
+                document.getElementById('hint-text').innerText = `💡 Petunjuk: ${q.hint}`;
+            }
+
+            wrapper.innerHTML = `
+                <div class="w-full bg-slate-100 p-2.5 rounded-2xl border-2 border-slate-300 flex items-center shadow-inner mb-4 focus-within:border-green-600 focus-within:bg-white transition">
+                    <span class="text-gray-500 font-bold px-3 font-mono text-xl border-r border-slate-300 mr-2">fx</span>
+                    <input type="text" id="formula-input" placeholder="Ketik rumus di sini... (contoh: =SUM(A1:A5))" 
+                           class="w-full bg-transparent font-mono text-lg font-bold text-gray-800 focus:outline-none uppercase" 
+                           autocomplete="off">
+                </div>
+                <button id="submit-input-btn" onclick="checkInputAnswer()" class="bg-[#217346] hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full shadow-md transition transform hover:scale-105 active:scale-95">
+                    <i class="fas fa-check mr-2"></i> Periksa Jawaban
+                </button>
+            `;
+
+            container.appendChild(wrapper);
+
+            setTimeout(() => {
+                const inputField = document.getElementById('formula-input');
+                if (inputField) {
+                    inputField.focus();
+                    inputField.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') checkInputAnswer();
+                    });
+                }
+            }, 100);
+        }
+
+        function checkInputAnswer() {
+            const inputField = document.getElementById('formula-input');
+            const submitBtn = document.getElementById('submit-input-btn');
+            if (!inputField || inputField.disabled) return;
+
+            const userVal = inputField.value.trim().replace(/\s+/g, '').toUpperCase();
+            if (!userVal) return;
+
+            inputField.disabled = true;
+            if (submitBtn) submitBtn.disabled = true;
+
+            const q = questions[currentQuestionIndex];
+            const isCorrect = q.acceptedAnswers.some(ans => ans.replace(/\s+/g, '').toUpperCase() === userVal);
+
+            const feedback = document.getElementById('feedback-container');
+
+            if (isCorrect) {
+                score += 10;
+                updateScoreDisplay();
+                inputField.parentElement.className = 'w-full bg-green-100 p-2.5 rounded-2xl border-2 border-green-500 flex items-center shadow-inner mb-4';
+                
+                feedback.className = 'rounded-2xl p-4 md:p-5 mb-5 text-base font-bold bg-green-100 text-green-900 border-2 border-green-300 bounce-in';
+                feedback.innerHTML = `<i class="fas fa-circle-check text-2xl mr-2 text-green-600 align-middle"></i> <span class="align-middle"><strong>Rumus Benar!</strong> ${q.r}</span>`;
+                playSound(correctSound);
+            } else {
+                inputField.parentElement.className = 'w-full bg-red-100 p-2.5 rounded-2xl border-2 border-red-500 flex items-center shadow-inner mb-4';
+                
+                feedback.className = 'rounded-2xl p-4 md:p-5 mb-5 text-base font-bold bg-red-100 text-red-900 border-2 border-red-300 bounce-in';
+                feedback.innerHTML = `<i class="fas fa-circle-xmark text-2xl mr-2 text-red-600 align-middle"></i> <span class="align-middle"><strong>Rumus Kurang Tepat.</strong> Jawaban benar: <code class="bg-red-200 px-2 py-0.5 rounded font-mono text-red-900">${q.acceptedAnswers[0]}</code>. ${q.r}</span>`;
+                playSound(wrongSound);
+            }
+
+            feedback.classList.remove('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function renderDragAssemble(q, container) {
+            assembledTokens = [];
+            const shuffledTokens = shuffleArray(q.tokens);
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'flex flex-col items-center py-2';
+
+            wrapper.innerHTML = `
+                <p class="text-sm text-gray-500 font-bold mb-3">Klik atau seret blok kata di bawah ke dalam kotak tujuan:</p>
+                
+                <!-- Drop Slot Container -->
+                <div id="drop-zone" class="w-full min-h-[64px] bg-emerald-50 border-2 border-dashed border-emerald-400 rounded-2xl p-3 flex flex-wrap items-center justify-center gap-2 mb-6 shadow-inner">
+                    <span id="drop-placeholder" class="text-gray-400 text-sm font-bold italic">Kotak Rumus Masih Kosong...</span>
+                </div>
+
+                <!-- Source Palette Tokens -->
+                <div id="token-palette" class="flex flex-wrap items-center justify-center gap-3 mb-6">
+                    ${shuffledTokens.map((tok, idx) => `
+                        <button onclick="handleTokenClick('${tok}', ${idx})" id="token-btn-${idx}" 
+                                class="drag-item bg-white border-2 border-green-600 hover:bg-green-50 text-green-800 font-mono font-black text-lg py-2.5 px-5 rounded-2xl shadow transition transform hover:scale-105 active:scale-95">
+                            ${tok}
+                        </button>
+                    `).join('')}
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="clearAssembleTokens()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-5 rounded-xl text-sm transition">
+                        <i class="fas fa-undo mr-1"></i> Reset
+                    </button>
+                    <button id="submit-assemble-btn" onclick="checkAssembleAnswer()" class="bg-[#217346] hover:bg-green-700 text-white font-bold py-2.5 px-7 rounded-xl text-sm shadow transition transform hover:scale-105 active:scale-95">
+                        <i class="fas fa-check mr-1"></i> Cek Rumus
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(wrapper);
+        }
+
+        function handleTokenClick(tok, idx) {
+            const btn = document.getElementById(`token-btn-${idx}`);
+            if (btn.classList.contains('placed')) return;
+
+            btn.classList.add('placed');
+            assembledTokens.push({ tok, idx });
+            updateDropZone();
+        }
+
+        function removeAssembledToken(arrayIndex) {
+            const item = assembledTokens[arrayIndex];
+            if (!item) return;
+
+            const btn = document.getElementById(`token-btn-${item.idx}`);
+            if (btn) btn.classList.remove('placed');
+
+            assembledTokens.splice(arrayIndex, 1);
+            updateDropZone();
+        }
+
+        function clearAssembleTokens() {
+            assembledTokens.forEach(item => {
+                const btn = document.getElementById(`token-btn-${item.idx}`);
+                if (btn) btn.classList.remove('placed');
+            });
+            assembledTokens = [];
+            updateDropZone();
+        }
+
+        function updateDropZone() {
+            const dropZone = document.getElementById('drop-zone');
+            if (!dropZone) return;
+
+            if (assembledTokens.length === 0) {
+                dropZone.innerHTML = `<span id="drop-placeholder" class="text-gray-400 text-sm font-bold italic">Kotak Rumus Masih Kosong...</span>`;
+            } else {
+                dropZone.innerHTML = assembledTokens.map((item, aIdx) => `
+                    <button onclick="removeAssembledToken(${aIdx})" class="bg-[#217346] text-white font-mono font-bold text-lg py-2 px-4 rounded-xl shadow flex items-center gap-2 hover:bg-red-600 transition bounce-in">
+                        <span>${item.tok}</span>
+                        <i class="fas fa-xmark text-xs opacity-75"></i>
+                    </button>
+                `).join('');
+            }
+        }
+
+        function checkAssembleAnswer() {
+            const q = questions[currentQuestionIndex];
+            const userSequence = assembledTokens.map(t => t.tok);
+            
+            if (userSequence.length === 0) return;
+
+            const isCorrect = JSON.stringify(userSequence) === JSON.stringify(q.correctOrder);
+            const feedback = document.getElementById('feedback-container');
+
+            document.getElementById('submit-assemble-btn').disabled = true;
+
+            if (isCorrect) {
+                score += 10;
+                updateScoreDisplay();
+                feedback.className = 'rounded-2xl p-4 md:p-5 mb-5 text-base font-bold bg-green-100 text-green-900 border-2 border-green-300 bounce-in';
+                feedback.innerHTML = `<i class="fas fa-circle-check text-2xl mr-2 text-green-600 align-middle"></i> <span class="align-middle"><strong>Susunan Rumus Tepat!</strong> ${q.r}</span>`;
+                playSound(correctSound);
+            } else {
+                feedback.className = 'rounded-2xl p-4 md:p-5 mb-5 text-base font-bold bg-red-100 text-red-900 border-2 border-red-300 bounce-in';
+                feedback.innerHTML = `<i class="fas fa-circle-xmark text-2xl mr-2 text-red-600 align-middle"></i> <span class="align-middle"><strong>Susunan Kurang Tepat.</strong> Urutan benar: <code class="bg-red-200 px-2 py-0.5 rounded font-mono">${q.correctOrder.join(' ')}</code>. ${q.r}</span>`;
+                playSound(wrongSound);
+            }
+
+            feedback.classList.remove('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function renderDragMatch(q, container) {
+            matchSelections = {};
+            const items = shuffleArray(q.pairs.map(p => p.item));
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'py-2 max-w-xl mx-auto';
+
+            wrapper.innerHTML = `
+                <p class="text-sm text-gray-500 font-bold mb-4 text-center">Pilih pasangan yang cocok untuk setiap pernyataan:</p>
+                <div class="space-y-3 mb-6">
+                    ${q.pairs.map((p, idx) => `
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200 gap-3">
+                            <span class="font-bold text-gray-800 text-base flex-1">${p.target}</span>
+                            <select id="match-select-${idx}" onchange="matchSelections[${idx}] = this.value" class="bg-white border-2 border-green-600 text-green-900 font-bold py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="">-- Pilih Pasangan --</option>
+                                ${items.map(it => `<option value="${it}">${it}</option>`).join('')}
+                            </select>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="text-center">
+                    <button id="submit-match-btn" onclick="checkMatchAnswer()" class="bg-[#217346] hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full shadow-md transition transform hover:scale-105 active:scale-95">
+                        <i class="fas fa-check mr-2"></i> Periksa Jodoh Pasangan
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(wrapper);
+        }
+
+        function checkMatchAnswer() {
+            const q = questions[currentQuestionIndex];
+            let allCorrect = true;
+
+            q.pairs.forEach((p, idx) => {
+                const userVal = matchSelections[idx];
+                if (userVal !== p.item) allCorrect = false;
+            });
+
+            document.getElementById('submit-match-btn').disabled = true;
+            const feedback = document.getElementById('feedback-container');
+
+            if (allCorrect) {
+                score += 10;
+                updateScoreDisplay();
+                feedback.className = 'rounded-2xl p-4 md:p-5 mb-5 text-base font-bold bg-green-100 text-green-900 border-2 border-green-300 bounce-in';
+                feedback.innerHTML = `<i class="fas fa-circle-check text-2xl mr-2 text-green-600 align-middle"></i> <span class="align-middle"><strong>Semua Pasangan Cocok!</strong> ${q.r}</span>`;
+                playSound(correctSound);
+            } else {
+                feedback.className = 'rounded-2xl p-4 md:p-5 mb-5 text-base font-bold bg-red-100 text-red-900 border-2 border-red-300 bounce-in';
+                feedback.innerHTML = `<i class="fas fa-circle-xmark text-2xl mr-2 text-red-600 align-middle"></i> <span class="align-middle"><strong>Ada Pasangan yang Belum Tepat.</strong> ${q.r}</span>`;
+                playSound(wrongSound);
+            }
+
+            feedback.classList.remove('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('score-display').innerHTML = `<i class="fas fa-trophy text-yellow-500 mr-1"></i> Skor: ${score}`;
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            const totalPossible = questions.length * 10;
+            const percentage = Math.round((score / totalPossible) * 100);
+
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('score-percentage').innerText = `${percentage}% BENAR (${score/10} dari ${questions.length} Soal)`;
+
+            let message, icon;
+            if (percentage === 100) {
+                message = "LUAR BIASA PERFECT! Kamu adalah Sang Juara Master Excel SMP! 🌟🎉";
+                icon = "🏆";
+            } else if (percentage >= 75) {
+                message = "HEBAT BANGET! Pemahaman rumus dan fitur Excel kamu sangat mantap! 👍✨";
+                icon = "🥇";
+            } else if (percentage >= 50) {
+                message = "BAGUS! Cukup baik, latihan sedikit lagi biar tambah jago ya! 💪📚";
+                icon = "🥈";
+            } else {
+                message = "JANGAN MENYERAH! Ayo pelajari lagi rumus-rumusnya dan coba kuis ini sekali lagi! 🚀🌱";
+                icon = "🎯";
+            }
+
+            document.getElementById('result-message').innerText = message;
+            document.getElementById('result-icon').innerText = icon;
+            document.getElementById('progress-bar-inner').style.width = '100%';
+        }
+
+        function resetQuiz() {
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
